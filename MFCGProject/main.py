@@ -3,28 +3,16 @@ import copy
 import numpy as np
 import open3d as o3d
 
+from bezier_spline import BezierSpline
 
-def test():
-    size = 0.1
-    sphere = o3d.geometry.TriangleMesh.create_sphere(size)
-    sphere.compute_vertex_normals()
-    sphere.paint_uniform_color([1, 0, 0])
 
-    first_v = len(np.asarray(sphere.vertices))
-    first_t = len(np.asarray(sphere.triangles))
+def make_equals_triangles_method1(figure_from, figure_to):
+    first_v = len(np.asarray(figure_to.vertices))
+    first_t = len(np.asarray(figure_to.triangles))
     print(f"f_v:{first_v}, f_t:{first_t}")
-
-    box = o3d.geometry.TriangleMesh.create_box(2*size, 2*size, 2*size)
-    box_v = np.asarray(box.vertices)
-    for i in range(0, len(box_v)):
-        box_v[i] = box_v[i] - size*np.asarray([1, 1, 1])
-    box.vertices = o3d.utility.Vector3dVector(np.asarray(box_v))
-
-    # box.vertices = o3d.utility.Vector3dVector(np.asarray([[2,1,0],[2,6,0],[7,1,0],[7, 6, 0]]))
-    # box.triangles = o3d.utility.Vector3iVector(np.asarray([[0, 1, 2], [1, 2, 3]]))
-    second_vertices = np.asarray(box.vertices)
+    second_vertices = np.asarray(figure_from.vertices)
     second_v = len(second_vertices)
-    second_triangles = np.asarray(box.triangles)
+    second_triangles = np.asarray(figure_from.triangles)
     second_t = len(second_triangles)
 
     vertices = second_vertices.tolist()
@@ -40,7 +28,7 @@ def test():
             v1 = second_vertices[t[0]]
             v2 = second_vertices[t[1]]
             v3 = second_vertices[t[2]]
-            center = [0,0,0]
+            center = [0, 0, 0]
             if v1[0] == v2[0] and v2[0] == v3[0]:
                 center = [v1[0], (v1[1] + v2[1] + v3[1]) / 3, (v1[2] + v2[2] + v3[2]) / 3]
             elif v1[1] == v2[1] and v2[1] == v3[1]:
@@ -55,11 +43,59 @@ def test():
         second_triangles = triangles
         second_vertices = vertices
 
-    box.vertices = o3d.utility.Vector3dVector(np.asarray(vertices))
-    box.triangles = o3d.utility.Vector3iVector(np.asarray(triangles))
+    figure_from.vertices = o3d.utility.Vector3dVector(np.asarray(vertices))
+    figure_from.triangles = o3d.utility.Vector3iVector(np.asarray(triangles))
+
+def make_equals_triangles_method2(figure_from, figure_to):
+    first_v = len(np.asarray(figure_to.vertices))
+    first_t = len(np.asarray(figure_to.triangles))
+    print(f"f_v:{first_v}, f_t:{first_t}")
+    second_vertices = np.asarray(figure_from.vertices)
+    second_v = len(second_vertices)
+    second_triangles = np.asarray(figure_from.triangles)
+    second_t = len(second_triangles)
+
+    vertices = second_vertices.tolist()
+    triangles = second_triangles.tolist()
+
+    while first_v != second_v:
+        for i in range(0, len(second_triangles)):
+            if first_v == second_v:
+                break
+            second_v += 1
+            second_t += 2
+            t = second_triangles[i]
+            v1 = second_vertices[t[0]]
+            v2 = second_vertices[t[1]]
+            v3 = second_vertices[t[2]]
+            index = len(vertices)
+            triangles.append([index, t[0], t[1]])
+            triangles.append([index, t[1], t[2]])
+            vertices.append(v3)
+
+    figure_from.vertices = o3d.utility.Vector3dVector(np.asarray(vertices))
+    figure_from.triangles = o3d.utility.Vector3iVector(np.asarray(triangles))
+
+
+def test():
+    size = 0.1
+    sphere = o3d.geometry.TriangleMesh.create_sphere(size)
+    sphere.compute_vertex_normals()
+    sphere.paint_uniform_color([1, 0, 0])
+
+
+
+    box = o3d.geometry.TriangleMesh.create_box(2*size, 2*size, 2*size)
+    box_v = np.asarray(box.vertices)
+    for i in range(0, len(box_v)):
+        box_v[i] = box_v[i] - size*np.asarray([1, 1, 1])
+    box.vertices = o3d.utility.Vector3dVector(np.asarray(box_v))
+    make_equals_triangles_method2(box, sphere)
+    # box.vertices = o3d.utility.Vector3dVector(np.asarray([[2,1,0],[2,6,0],[7,1,0],[7, 6, 0]]))
+    # box.triangles = o3d.utility.Vector3iVector(np.asarray([[0, 1, 2], [1, 2, 3]]))
+
     box.compute_vertex_normals()
     box.paint_uniform_color([0, 1, 0])
-    print(second_v, second_t)
     t = Test(box, sphere)
     # o3d.visualization.draw_geometries([sphere], "Test", 800, 800, mesh_show_wireframe=True,mesh_show_back_face=True)
 
@@ -79,7 +115,8 @@ class Test:
         self.current = copy.deepcopy(box)
         self.sphere = sphere
         self.to_v = np.asarray(sphere.vertices)
-        self.vis.create_window()
+
+        self.vis.create_window("3D Morphing", 800, 800, 100, 100)
         self.vis.register_key_callback(65, self.your_update_function)
         self.vis.add_geometry(self.current)
         self.vis.run()
@@ -93,7 +130,8 @@ class Test:
         ver = np.asarray(self.current.vertices)
         color = (1 - self.t)*self.color_from + self.t * self.color_to
         for i in range(0, len(ver)):
-            ver[i] = (1 - self.t)*self.from_v[i] + self.t * self.to_v[i]
+            bezier = BezierSpline([self.from_v[i], self.to_v[i]])
+            ver[i] = bezier.run(self.t, 0)
         self.current.vertices = o3d.utility.Vector3dVector(ver)
         self.current.paint_uniform_color(color)
         vis.update_geometry(self.current)
