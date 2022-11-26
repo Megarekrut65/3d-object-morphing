@@ -60,10 +60,46 @@ def test():
     box.compute_vertex_normals()
     box.paint_uniform_color([0, 1, 0])
     print(second_v, second_t)
+    t = Test(box, sphere)
+    # o3d.visualization.draw_geometries([sphere], "Test", 800, 800, mesh_show_wireframe=True,mesh_show_back_face=True)
 
-    o3d.visualization.draw_geometries([sphere, box], "Test", 800, 800, mesh_show_wireframe=True,
-                                      mesh_show_back_face=True)
 
+class Test:
+
+    def __init__(self, box, sphere):
+        self.t = 0
+        self.color_from = np.asarray([0, 1, 0])
+        self.color_to = np.asarray([1, 0, 0])
+        self.vis = o3d.visualization.VisualizerWithKeyCallback()
+        self.box = box
+        self.from_v = np.asarray(box.vertices)
+        input_points = o3d.geometry.PointCloud()
+        input_points.points = o3d.utility.Vector3dVector(self.from_v)
+        input_points.colors = o3d.utility.Vector3dVector([[1, 0, 0] for _ in range(0, len(self.from_v))])
+        self.current = copy.deepcopy(box)
+        self.sphere = sphere
+        self.to_v = np.asarray(sphere.vertices)
+        self.vis.create_window()
+        self.vis.register_key_callback(65, self.your_update_function)
+        self.vis.add_geometry(self.current)
+        self.vis.run()
+        self.vis.destroy_window()
+
+    def your_update_function(self, vis):
+        if self.t >= 1:
+            return
+        self.t += 0.05
+        print(self.t)
+        ver = np.asarray(self.current.vertices)
+        color = (1 - self.t)*self.color_from + self.t * self.color_to
+        for i in range(0, len(ver)):
+            ver[i] = (1 - self.t)*self.from_v[i] + self.t * self.to_v[i]
+        self.current.vertices = o3d.utility.Vector3dVector(ver)
+        self.current.paint_uniform_color(color)
+        vis.update_geometry(self.current)
+        vis.update_renderer()
+        vis.poll_events()
+        vis.run()
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     test()
