@@ -40,16 +40,30 @@ def get_centered_cylinder(size):
     return cylinder
 
 
+def get_centered_icosahedron(size):
+    icosahedron = o3d.geometry.TriangleMesh.create_icosahedron(size)
+    icosahedron.compute_vertex_normals()
+
+    return icosahedron
+
+
 def main():
     size = 0.1
 
     # size can be difference
     sphere = get_centered_sphere(size)
+    icosahedron = o3d.geometry.TriangleMesh.create_icosahedron(size)
     cylinder = get_centered_cylinder(size)
     box = get_centered_box(size)
     cone = get_centered_cone(size)
 
+    t = Morph3D(box, cylinder)
+    t.run()
+    t = Morph3D(cylinder, cone)
+    t.run()
     t = Morph3D(cone, sphere)
+    t.run()
+    t = Morph3D(sphere, icosahedron)
     t.run()
 
 

@@ -59,6 +59,7 @@ class Morph3D:
         self.from_obj = from_obj
         self.to_obj = to_obj
 
+        # adds additional vertices and triangles to the smaller shape
         from_obj_len = len(np.asarray(from_obj.vertices))
         to_obj_len = len(np.asarray(to_obj.vertices))
 
@@ -87,7 +88,7 @@ class Morph3D:
     def __update_function(self, vis):
         if self.t < self.delta:
             self.current_obj.vertices = self.from_obj.vertices
-            self.current_obj.triangles = self.from_obj.triangles
+            self.current_obj.triangles = self.to_obj.triangles
 
         self.t += self.delta
         if self.t >= 1:
