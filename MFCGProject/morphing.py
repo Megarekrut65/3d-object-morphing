@@ -25,19 +25,22 @@ def find_closest_point_index(from_point, to_point):
 
 def make_mesh_isomorphic_to_other(from_obj, to_obj):
     to_ver = np.asarray(to_obj.vertices)
-    from_ver = np.asarray(from_obj.vertices).tolist()
+    from_ver = np.asarray(from_obj.vertices)
 
-    from_current_ver = np.asarray(from_obj.vertices).tolist()
-    new_ver = []
+    new_ver = np.zeros((len(to_ver), 3))
+
+    indexes = []
+    for i in range(0, len(from_ver)):
+        point = from_ver[i]
+        index = find_closest_point_index(point, to_ver)
+        new_ver[index] = from_ver[i]
+        indexes.append(index)
 
     for i in range(0, len(to_ver)):
-        point = to_ver[i]
-        if len(from_current_ver) == 0:
-            new_ver.append(from_ver[find_closest_point_index(point, from_ver)])
+        if i in indexes:
             continue
-        item = from_current_ver[find_closest_point_index(point, from_current_ver)]
-        from_current_ver.remove(item)
-        new_ver.append(item)
+        point = to_ver[i]
+        new_ver[i] = from_ver[find_closest_point_index(point, from_ver)]
 
     new_obj = copy.deepcopy(from_obj)
     new_obj.vertices = o3d.utility.Vector3dVector(np.asarray(new_ver))
@@ -50,9 +53,9 @@ def make_mesh_isomorphic_to_other(from_obj, to_obj):
 
 class Morph3D:
 
-    def __init__(self, from_obj, to_obj):
+    def __init__(self, from_obj, to_obj, delta=0.03):
         self.t = 0
-        self.delta = 0.05
+        self.delta = delta
 
         self.to_color = np.asarray([1, 0, 0])
         self.from_color = np.asarray([0, 1, 0])
@@ -77,15 +80,29 @@ class Morph3D:
         self.current_obj.compute_triangle_normals()
 
         self.vis = o3d.visualization.VisualizerWithKeyCallback()
+        self.is_started = False
 
-    def run(self):
+    def run(self, as_animation=True):
         self.vis.create_window("3D Morphing", 800, 800, 100, 100)
-        self.vis.register_key_callback(65, self.__update_function)
+
+        if as_animation:
+            self.vis.register_key_callback(32, self.__play_pause_anim)
+            self.vis.register_animation_callback(self.__update_function)
+        else:
+            self.is_started = True
+            self.vis.register_key_callback(32, self.__update_function)
+
         self.vis.add_geometry(self.current_obj)
         self.vis.run()
         self.vis.destroy_window()
 
+    def __play_pause_anim(self, _):
+        self.is_started = not self.is_started
+
     def __update_function(self, vis):
+        if not self.is_started:
+            return
+
         if self.t < self.delta:
             self.current_obj.vertices = self.from_obj.vertices
             self.current_obj.triangles = self.to_obj.triangles
@@ -107,4 +124,3 @@ class Morph3D:
         vis.update_geometry(self.current_obj)
         vis.update_renderer()
         vis.poll_events()
-        vis.run()
