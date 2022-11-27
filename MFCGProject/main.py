@@ -1,4 +1,5 @@
 import copy
+from math import sqrt
 
 import numpy as np
 import open3d as o3d
@@ -75,7 +76,7 @@ def make_equals_triangles_method2(figure_from, figure_to):
 
     figure_from.vertices = o3d.utility.Vector3dVector(np.asarray(vertices))
     figure_from.triangles = o3d.utility.Vector3iVector(np.asarray(triangles))
-
+    print(f"s_v:{len(vertices)}, s_t:{len(triangles)}")
 
 def test():
     size = 0.1
@@ -93,14 +94,45 @@ def test():
     make_equals_triangles_method2(box, sphere)
     # box.vertices = o3d.utility.Vector3dVector(np.asarray([[2,1,0],[2,6,0],[7,1,0],[7, 6, 0]]))
     # box.triangles = o3d.utility.Vector3iVector(np.asarray([[0, 1, 2], [1, 2, 3]]))
-
     box.compute_vertex_normals()
     box.paint_uniform_color([0, 1, 0])
     t = Test(box, sphere)
-    # o3d.visualization.draw_geometries([sphere], "Test", 800, 800, mesh_show_wireframe=True,mesh_show_back_face=True)
+    cone = o3d.geometry.TriangleMesh.create_cone(size, 2*size)
+    cone_v = np.asarray(cone.vertices)
+    for i in range(0, len(cone_v)):
+        cone_v[i] = cone_v[i] - size * np.asarray([0, 0, 1])
+    cone.vertices = o3d.utility.Vector3dVector(np.asarray(cone_v))
+    print(f"{len(cone_v)} {len(np.asarray(cone.triangles))}")
+    make_equals_triangles_method2(cone, sphere)
+    cone.compute_vertex_normals()
+    cone.paint_uniform_color([0, 1, 0])
+    t = Test(cone, sphere)
+    # o3d.visualization.draw_geometries([sphere, cone], "Test", 800, 800, mesh_show_wireframe=True,mesh_show_back_face=True)
 
+def point_abs(a):
+    res = 0
+    for i in range(0, len(a)):
+        res += a[i] ** 2
+    return sqrt(res)
 
 class Test:
+    def make_point_pairs(self):
+        new_from_v = []
+        for i in range(0, len(self.to_v)):
+            point = self.to_v[i]
+            delta_min = point_abs(self.from_v[0] - point)
+            index_min = 0
+            for j in range(1, len(self.from_v)):
+                point2 = self.from_v[j]
+                delta = point_abs(point2 - point)
+                if delta < delta_min:
+                    delta_min = delta
+                    index_min = j
+            new_from_v.append(self.from_v[index_min])
+            self.from_v.remove(self.from_v[index_min])
+        self.from_v = np.array(new_from_v)
+
+
 
     def __init__(self, box, sphere):
         self.t = 0
@@ -108,13 +140,19 @@ class Test:
         self.color_to = np.asarray([1, 0, 0])
         self.vis = o3d.visualization.VisualizerWithKeyCallback()
         self.box = box
-        self.from_v = np.asarray(box.vertices)
+        self.from_v = np.asarray(box.vertices).tolist()
         input_points = o3d.geometry.PointCloud()
         input_points.points = o3d.utility.Vector3dVector(self.from_v)
         input_points.colors = o3d.utility.Vector3dVector([[1, 0, 0] for _ in range(0, len(self.from_v))])
         self.current = copy.deepcopy(box)
         self.sphere = sphere
         self.to_v = np.asarray(sphere.vertices)
+        self.make_point_pairs()
+        self.current.vertices = o3d.utility.Vector3dVector(self.from_v)
+        self.current.compute_vertex_normals()
+        self.current.triangles = self.sphere.triangles
+        self.current.compute_vertex_normals()
+        self.current.compute_triangle_normals()
 
         self.vis.create_window("3D Morphing", 800, 800, 100, 100)
         self.vis.register_key_callback(65, self.your_update_function)
@@ -123,17 +161,25 @@ class Test:
         self.vis.destroy_window()
 
     def your_update_function(self, vis):
-        if self.t >= 1:
-            return
         self.t += 0.05
+        if self.t >= 1:
+            self.t = 1
         print(self.t)
         ver = np.asarray(self.current.vertices)
+        """triangle_index = int((self.t/2 + 0.5) * len(np.asarray(self.sphere.triangles)))
+        triangle = np.asarray(self.current.triangles)
+        triangle_to = np.asarray(self.sphere.triangles)
+        for i in range(0, triangle_index):
+            triangle[i] = triangle_to[i]
+        self.current.triangles = o3d.utility.Vector3iVector(triangle)"""
         color = (1 - self.t)*self.color_from + self.t * self.color_to
         for i in range(0, len(ver)):
             bezier = BezierSpline([self.from_v[i], self.to_v[i]])
             ver[i] = bezier.run(self.t, 0)
         self.current.vertices = o3d.utility.Vector3dVector(ver)
         self.current.paint_uniform_color(color)
+        self.current.compute_vertex_normals()
+        self.current.compute_triangle_normals()
         vis.update_geometry(self.current)
         vis.update_renderer()
         vis.poll_events()
