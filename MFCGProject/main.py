@@ -6,206 +6,122 @@ import open3d as o3d
 
 from bezier_spline import BezierSpline
 
-
-def make_equals_triangles_method1(figure_from, figure_to):
-    first_v = len(np.asarray(figure_to.vertices))
-    first_t = len(np.asarray(figure_to.triangles))
-    print(f"f_v:{first_v}, f_t:{first_t}")
-    second_vertices = np.asarray(figure_from.vertices)
-    second_v = len(second_vertices)
-    second_triangles = np.asarray(figure_from.triangles)
-    second_t = len(second_triangles)
-
-    vertices = second_vertices.tolist()
-    triangles = []
-
-    while first_v != second_v:
-        for i in range(0, len(second_triangles)):
-            if first_v == second_v:
-                break
-            second_v += 1
-            second_t += 2
-            t = second_triangles[i]
-            v1 = second_vertices[t[0]]
-            v2 = second_vertices[t[1]]
-            v3 = second_vertices[t[2]]
-            center = [0, 0, 0]
-            if v1[0] == v2[0] and v2[0] == v3[0]:
-                center = [v1[0], (v1[1] + v2[1] + v3[1]) / 3, (v1[2] + v2[2] + v3[2]) / 3]
-            elif v1[1] == v2[1] and v2[1] == v3[1]:
-                center = [(v1[0] + v2[0] + v3[0]) / 3, v1[1], (v1[2] + v2[2] + v3[2]) / 3]
-            elif v1[2] == v2[2] and v2[2] == v3[2]:
-                center = [(v1[0] + v2[0] + v3[0]) / 3, (v1[1] + v2[1] + v3[1]) / 3, v1[2]]
-            index = len(vertices)
-            triangles.append([index, t[0], t[1]])
-            triangles.append([index, t[0], t[2]])
-            triangles.append([index, t[2], t[1]])
-            vertices.append(center)
-        second_triangles = triangles
-        second_vertices = vertices
-
-    figure_from.vertices = o3d.utility.Vector3dVector(np.asarray(vertices))
-    figure_from.triangles = o3d.utility.Vector3iVector(np.asarray(triangles))
-
-
-def make_equals_triangles_method2(figure_from, figure_to):
-    first_v = len(np.asarray(figure_to.vertices))
-    first_t = len(np.asarray(figure_to.triangles))
-    print(f"f_v:{first_v}, f_t:{first_t}")
-    second_vertices = np.asarray(figure_from.vertices)
-    second_v = len(second_vertices)
-    second_triangles = np.asarray(figure_from.triangles)
-    second_t = len(second_triangles)
-
-    vertices = second_vertices.tolist()
-    triangles = second_triangles.tolist()
-
-    while first_v != second_v:
-        for i in range(0, len(second_triangles)):
-            if first_v == second_v:
-                break
-            second_v += 1
-            second_t += 2
-            t = second_triangles[i]
-            v1 = second_vertices[t[0]]
-            v2 = second_vertices[t[1]]
-            v3 = second_vertices[t[2]]
-            index = len(vertices)
-            triangles.append([index, t[0], t[1]])
-            triangles.append([index, t[1], t[2]])
-            vertices.append(v3)
-
-    figure_from.vertices = o3d.utility.Vector3dVector(np.asarray(vertices))
-    figure_from.triangles = o3d.utility.Vector3iVector(np.asarray(triangles))
-    print(f"s_v:{len(vertices)}, s_t:{len(triangles)}")
-
-def find_closest_point_index(point_from, points_to):
-    min_index = 0
-    min_distance = point_abs(point_from - points_to[0])
-    for j in range(1, len(points_to)):
-        distance = point_abs(point_from - points_to[j])
-        if distance < min_distance:
-            min_distance = distance
-            min_index = j
-    return min_index
-
-def make_equals_triangles_method3(figure_from, figure_to):
-    to_ver = np.asarray(figure_to.vertices)
-    to_v = len(to_ver)
-    from_ver = np.asarray(figure_from.vertices).tolist()
-    vertices = []
-    ver = np.asarray(figure_from.vertices).tolist()
-
-    for i in range(0, to_v):
-        point = to_ver[i]
-        if len(from_ver) == 0:
-            vertices.append(ver[find_closest_point_index(point, ver)])
-            continue
-        item = from_ver[find_closest_point_index(point, from_ver)]
-        from_ver.remove(item)
-        vertices.append(item)
-
-    figure_from.vertices = o3d.utility.Vector3dVector(np.asarray(vertices))
-    figure_from.triangles = figure_to.triangles
-
-
-
-def test():
-    size = 0.1
-    sphere = o3d.geometry.TriangleMesh.create_sphere(size)
-    sphere.compute_vertex_normals()
-    sphere.paint_uniform_color([1, 0, 0])
-
-    cyl = o3d.geometry.TriangleMesh.create_cylinder(size, 2 * size)
-    print(f"{len(np.asarray(cyl.vertices))} {len(np.asarray(cyl.triangles))}")
-    make_equals_triangles_method3(cyl, sphere)
-    cyl.compute_vertex_normals()
-    cyl.paint_uniform_color([0, 1, 0])
-    t = Test(cyl, sphere)
-
-    box = o3d.geometry.TriangleMesh.create_box(2 * size, 2 * size, 2 * size)
-    box_v = np.asarray(box.vertices)
-    for i in range(0, len(box_v)):
-        box_v[i] = box_v[i] - size * np.asarray([1, 1, 1])
-    box.vertices = o3d.utility.Vector3dVector(np.asarray(box_v))
-    make_equals_triangles_method3(box, sphere)
-    # box.vertices = o3d.utility.Vector3dVector(np.asarray([[2,1,0],[2,6,0],[7,1,0],[7, 6, 0]]))
-    # box.triangles = o3d.utility.Vector3iVector(np.asarray([[0, 1, 2], [1, 2, 3]]))
-    box.compute_vertex_normals()
-    box.paint_uniform_color([0, 1, 0])
-    t = Test(box, sphere)
-    cone = o3d.geometry.TriangleMesh.create_cone(size, 2 * size)
-    cone_v = np.asarray(cone.vertices)
-    for i in range(0, len(cone_v)):
-        cone_v[i] = cone_v[i] - size * np.asarray([0, 0, 1])
-    cone.vertices = o3d.utility.Vector3dVector(np.asarray(cone_v))
-    print(f"{len(cone_v)} {len(np.asarray(cone.triangles))}")
-    make_equals_triangles_method3(cone, sphere)
-    cone.compute_vertex_normals()
-    cone.paint_uniform_color([0, 1, 0])
-    t = Test(cone, sphere)
-    # o3d.visualization.draw_geometries([sphere, cone], "Test", 800, 800, mesh_show_wireframe=True,mesh_show_back_face=True)
-
-
 def point_abs(a):
     res = 0
     for i in range(0, len(a)):
         res += a[i] ** 2
     return sqrt(res)
 
+def find_closest_point_index(from_point, to_point):
+    min_index = 0
+    min_distance = point_abs(from_point - to_point[0])
+    for j in range(1, len(to_point)):
+        distance = point_abs(from_point - to_point[j])
+        if distance < min_distance:
+            min_distance = distance
+            min_index = j
+    return min_index
 
-class Test:
+def make_mesh_isomorphic_to_other(from_obj, to_obj):
+    to_ver = np.asarray(to_obj.vertices)
+    from_ver = np.asarray(from_obj.vertices).tolist()
 
-    def __init__(self, box, sphere):
+    from_current_ver = np.asarray(from_obj.vertices).tolist()
+    new_ver = []
+
+    for i in range(0, len(to_ver)):
+        point = to_ver[i]
+        if len(from_current_ver) == 0:
+            new_ver.append(from_ver[find_closest_point_index(point, from_ver)])
+            continue
+        item = from_current_ver[find_closest_point_index(point, from_current_ver)]
+        from_current_ver.remove(item)
+        new_ver.append(item)
+
+    new_obj = copy.deepcopy(from_obj)
+    new_obj.vertices = o3d.utility.Vector3dVector(np.asarray(new_ver))
+    new_obj.triangles = to_obj.triangles
+    new_obj.compute_vertex_normals()
+    new_obj.compute_triangle_normals()
+
+    return new_obj
+
+
+def main():
+    size = 0.1
+    sphere = o3d.geometry.TriangleMesh.create_sphere(size)
+    sphere.compute_vertex_normals()
+    cyl = o3d.geometry.TriangleMesh.create_cylinder(size, 2 * size)
+    cyl.compute_vertex_normals()
+    t = Morpher3D(cyl, sphere)
+
+    box = o3d.geometry.TriangleMesh.create_box(2 * size, 2 * size, 2 * size)
+    box_v = np.asarray(box.vertices)
+    for i in range(0, len(box_v)):
+        box_v[i] = box_v[i] - size * np.asarray([1, 1, 1])
+    box.vertices = o3d.utility.Vector3dVector(np.asarray(box_v))
+    t = Morpher3D(box, sphere)
+
+    cone = o3d.geometry.TriangleMesh.create_cone(size, 2 * size)
+    cone_v = np.asarray(cone.vertices)
+    for i in range(0, len(cone_v)):
+        cone_v[i] = cone_v[i] - size * np.asarray([0, 0, 1])
+    cone.vertices = o3d.utility.Vector3dVector(np.asarray(cone_v))
+    t = Morpher3D(cone, sphere)
+    # o3d.visualization.draw_geometries([sphere, cone], "Test", 800, 800, mesh_show_wireframe=True,mesh_show_back_face=True)
+
+
+
+class Morpher3D:
+
+    def __init__(self, from_obj, to_obj):
         self.t = 0
-        self.color_from = np.asarray([0, 1, 0])
-        self.color_to = np.asarray([1, 0, 0])
-        self.vis = o3d.visualization.VisualizerWithKeyCallback()
-        self.box = box
-        self.from_v = np.asarray(box.vertices).tolist()
-        input_points = o3d.geometry.PointCloud()
-        input_points.points = o3d.utility.Vector3dVector(self.from_v)
-        input_points.colors = o3d.utility.Vector3dVector([[1, 0, 0] for _ in range(0, len(self.from_v))])
-        self.current = copy.deepcopy(box)
-        self.sphere = sphere
-        self.to_v = np.asarray(sphere.vertices)
-        self.current.compute_vertex_normals()
-        self.current.compute_triangle_normals()
+        self.delta = 0.05
 
+        self.to_color = np.asarray([1, 0, 0])
+        self.to_obj = to_obj
+        self.to_ver = np.asarray(self.to_obj.vertices)
+
+        self.from_color = np.asarray([0, 1, 0])
+        self.from_obj = from_obj
+
+        self.iso = make_mesh_isomorphic_to_other(self.from_obj, self.to_obj)
+        self.from_ver = np.asarray(self.iso.vertices)
+
+        self.current_obj = copy.deepcopy(self.from_obj)
+        self.current_obj.paint_uniform_color(self.from_color)
+        self.current_obj.compute_vertex_normals()
+        self.current_obj.compute_triangle_normals()
+
+        self.vis = o3d.visualization.VisualizerWithKeyCallback()
         self.vis.create_window("3D Morphing", 800, 800, 100, 100)
-        self.vis.register_key_callback(65, self.your_update_function)
-        self.vis.add_geometry(self.current)
+        self.vis.register_key_callback(65, self.update_function)
+        self.vis.add_geometry(self.current_obj)
         self.vis.run()
         self.vis.destroy_window()
 
-    def your_update_function(self, vis):
-        self.t += 0.05
+    def update_function(self, vis):
+        if self.t < self.delta:
+            self.current_obj.vertices = self.iso.vertices
+            self.current_obj.triangles = self.iso.triangles
+        self.t += self.delta
         if self.t >= 1:
             self.t = 1
-        print(self.t)
-        ver = np.asarray(self.current.vertices)
-        """triangle_index = int((self.t/2 + 0.5) * len(np.asarray(self.sphere.triangles)))
-        triangle = np.asarray(self.current.triangles)
-        triangle_to = np.asarray(self.sphere.triangles)
-        for i in range(0, triangle_index):
-            triangle[i] = triangle_to[i]
-        self.current.triangles = o3d.utility.Vector3iVector(triangle)"""
-        color = (1 - self.t) * self.color_from + self.t * self.color_to
+        ver = np.asarray(self.current_obj.vertices)
         for i in range(0, len(ver)):
-            bezier = BezierSpline([self.from_v[i], self.to_v[i]])
-            ver[i] = bezier.run(self.t, 0)
-        self.current.vertices = o3d.utility.Vector3dVector(ver)
-        self.current.paint_uniform_color(color)
-        self.current.compute_vertex_normals()
-        self.current.compute_triangle_normals()
-        vis.update_geometry(self.current)
+            ver[i] = (1 - self.t) * self.from_ver[i] + self.t * self.to_ver[i]
+        self.current_obj.vertices = o3d.utility.Vector3dVector(ver)
+
+        color = (1 - self.t) * self.from_color + self.t * self.to_color
+        self.current_obj.paint_uniform_color(color)
+        self.current_obj.compute_vertex_normals()
+        self.current_obj.compute_triangle_normals()
+
+        vis.update_geometry(self.current_obj)
         vis.update_renderer()
         vis.poll_events()
         vis.run()
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    test()
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    main()
