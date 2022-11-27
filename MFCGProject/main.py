@@ -1,4 +1,3 @@
-import time
 
 import numpy as np
 import open3d as o3d
@@ -54,7 +53,7 @@ def main():
 
     # size can be difference
     sphere = get_centered_sphere(size)
-    icosahedron = o3d.geometry.TriangleMesh.create_icosahedron(size)
+    icosahedron = o3d.geometry.TriangleMesh.create_icosahedron(size/2)
     cylinder = get_centered_cylinder(size)
     box = get_centered_box(size)
     cone = get_centered_cone(size)
