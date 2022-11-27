@@ -58,12 +58,12 @@ def main():
     box = get_centered_box(size)
     cone = get_centered_cone(size)
 
-    t = Morph3D(box, cylinder)
+    t = Morph3D(box, cylinder)  # to start/pause morphing press SPACE key
     t.run()
     t = Morph3D(cylinder, cone)
     t.run()
     t = Morph3D(cone, sphere)
-    t.run()
+    t.run(as_animation=False)  # to show morphing step press SPACE key
     t = Morph3D(sphere, icosahedron)
     t.run()
 

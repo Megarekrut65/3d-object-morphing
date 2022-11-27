@@ -54,6 +54,12 @@ def make_mesh_isomorphic_to_other(from_obj, to_obj):
 class Morph3D:
 
     def __init__(self, from_obj, to_obj, delta=0.03):
+        """
+
+        :param from_obj: start object in morphing
+        :param to_obj: finish object in morphing
+        :param delta: step for changing objects. [0.0 - 1.0]
+        """
         self.t = 0
         self.delta = delta
 
@@ -65,7 +71,6 @@ class Morph3D:
         # adds additional vertices and triangles to the smaller shape
         from_obj_len = len(np.asarray(from_obj.vertices))
         to_obj_len = len(np.asarray(to_obj.vertices))
-
         if from_obj_len < to_obj_len:
             self.from_obj = make_mesh_isomorphic_to_other(from_obj, to_obj)
         elif from_obj_len > to_obj_len:
@@ -83,6 +88,12 @@ class Morph3D:
         self.is_started = False
 
     def run(self, as_animation=True):
+        """
+        Draws first object in opened window
+
+        :param as_animation: True to morph object automatically after press SPACE key.
+            False to morph using SPACE button for each step
+        """
         self.vis.create_window("3D Morphing", 800, 800, 100, 100)
 
         if as_animation:
@@ -100,6 +111,9 @@ class Morph3D:
         self.is_started = not self.is_started
 
     def __update_function(self, vis):
+        """
+        Does morph step and draws it in window
+        """
         if not self.is_started:
             return
 
